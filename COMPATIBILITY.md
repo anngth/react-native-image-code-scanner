@@ -6,17 +6,17 @@
 
 | React Native | Package Version | Architecture Support           | Notes                     |
 | ------------ | --------------- | ------------------------------ | ------------------------- |
-| 0.70.x       | ✅ 1.0.x        | Old Architecture               | Full support              |
-| 0.71.x       | ✅ 1.0.x        | Old Architecture               | Full support              |
-| 0.72.x       | ✅ 1.0.x        | Old Architecture               | Full support              |
-| 0.73.x       | ✅ 1.0.x        | Old & New Architecture         | Full support              |
-| 0.74.x       | ✅ 1.0.x        | Old & New Architecture         | Full support              |
-| 0.75.x       | ✅ 1.0.x        | Old & New Architecture         | Full support              |
-| 0.76.x       | ✅ 1.0.x        | New Architecture (default)     | Full support              |
-| 0.77.x       | ✅ 1.0.x        | New Architecture (default)     | Full support              |
-| 0.78.x       | ✅ 1.0.x        | New Architecture (default)     | Full support              |
-| **0.79.x**   | ✅ **1.0.x**    | **New Architecture (default)** | **Latest - Full support** |
-| 0.80.x+      | 🔜 1.0.x        | New Architecture               | Ready when released       |
+| 0.70.x       | ✅ 1.1.x        | Old Architecture               | Full support              |
+| 0.71.x       | ✅ 1.1.x        | Old Architecture               | Full support              |
+| 0.72.x       | ✅ 1.1.x        | Old Architecture               | Full support              |
+| 0.73.x       | ✅ 1.1.x        | Old & New Architecture         | Full support              |
+| 0.74.x       | ✅ 1.1.x        | Old & New Architecture         | Full support              |
+| 0.75.x       | ✅ 1.1.x        | Old & New Architecture         | Full support              |
+| 0.76.x       | ✅ 1.1.x        | New Architecture (default)     | Full support              |
+| 0.77.x       | ✅ 1.1.x        | New Architecture (default)     | Full support              |
+| 0.78.x       | ✅ 1.1.x        | New Architecture (default)     | Full support              |
+| **0.79.x**   | ✅ **1.1.x**    | **New Architecture (default)** | **Latest - Full support** |
+| 0.80.x+      | 🔜 1.1.x        | New Architecture               | Ready when released       |
 
 ### React Versions
 
@@ -30,10 +30,10 @@
 
 | Expo SDK   | React Native | Package Version | Status                                        |
 | ---------- | ------------ | --------------- | --------------------------------------------- |
-| SDK 49     | 0.72.x       | ✅ 1.0.x        | Supported (requires prebuild)                 |
-| SDK 50     | 0.73.x       | ✅ 1.0.x        | Supported (requires prebuild)                 |
-| SDK 51     | 0.74.x       | ✅ 1.0.x        | Supported (requires prebuild)                 |
-| **SDK 52** | **0.79.x**   | ✅ **1.0.x**    | **Latest - Full support (requires prebuild)** |
+| SDK 49     | 0.72.x       | ✅ 1.1.x        | Supported (requires prebuild)                 |
+| SDK 50     | 0.73.x       | ✅ 1.1.x        | Supported (requires prebuild)                 |
+| SDK 51     | 0.74.x       | ✅ 1.1.x        | Supported (requires prebuild)                 |
+| **SDK 52** | **0.79.x**   | ✅ **1.1.x**    | **Latest - Full support (requires prebuild)** |
 
 **Note**: This library requires prebuild for Expo projects as it uses native modules.
 
@@ -138,7 +138,7 @@ If you're upgrading from React Native 0.6x:
    }
    ```
 
-2. Update package version reference to 1.0.x in your project
+2. Update package version reference to 1.1.x in your project
 
 3. Update iOS deployment target to 13.4 or higher
 
@@ -212,7 +212,7 @@ npm install --save-dev @types/react@^18.0.0 @types/react-native@^0.72.0
 If you encounter compatibility issues:
 
 1. Check this compatibility guide
-2. Search [existing issues](https://github.com/nguyenthanhan/react-native-image-code-scanner/issues)
+2. Search [existing issues](https://github.com/anngth/react-native-image-code-scanner/issues)
 3. Create a new issue with:
    - React Native version
    - Package version

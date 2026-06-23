@@ -1,67 +1,103 @@
 name: 🐛 Bug report
-description: Report a reproducible bug or regression in this library.
+description: Report a reproducible bug or regression in react-native-image-code-scanner.
+title: '[Bug]: '
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        # Bug report
+        Thanks for reporting a bug. Please include enough detail for us to reproduce it.
 
-        👋 Hi!
+        - Feature requests → [Discussions / Ideas](https://github.com/anngth/react-native-image-code-scanner/discussions/new?category=ideas)
+        - Questions → [Discussions](https://github.com/anngth/react-native-image-code-scanner/discussions)
+        - Supported versions → [COMPATIBILITY.md](https://github.com/anngth/react-native-image-code-scanner/blob/main/COMPATIBILITY.md)
 
-        **Please fill the following carefully before opening a new issue ❗**
-        *(Your issue may be closed if it doesn't provide the required pieces of information)*
   - type: checkboxes
     attributes:
-      label: Before submitting a new issue
-      description: Please perform simple checks first.
+      label: Before you submit
       options:
-        - label: I tested using the latest version of the library, as the bug might be already fixed.
+        - label: I am using the latest version of `react-native-image-code-scanner`
           required: true
-        - label: I tested using a [supported version](https://github.com/reactwg/react-native-releases/blob/main/docs/support.md) of react native.
+        - label: I searched [existing issues](https://github.com/anngth/react-native-image-code-scanner/issues) and did not find a duplicate
           required: true
-        - label: I checked for possible duplicate issues, with possible answers.
+        - label: My React Native / Expo version is listed in [COMPATIBILITY.md](https://github.com/anngth/react-native-image-code-scanner/blob/main/COMPATIBILITY.md)
           required: true
-  - type: textarea
-    id: summary
+
+  - type: dropdown
+    id: platform
     attributes:
-      label: Bug summary
-      description: |
-        Provide a clear and concise description of what the bug is.
-        If needed, you can also provide other samples: error messages / stack traces, screenshots, gifs, etc.
+      label: Platform
+      options:
+        - iOS
+        - Android
+        - Both
     validations:
       required: true
+
+  - type: dropdown
+    id: project-type
+    attributes:
+      label: Project setup
+      options:
+        - Expo (prebuild)
+        - React Native CLI
+        - Other
+    validations:
+      required: true
+
   - type: input
     id: library-version
     attributes:
       label: Library version
-      description: What version of the library are you using?
-      placeholder: "x.x.x"
+      placeholder: e.g. 1.1.3
     validations:
       required: true
+
   - type: textarea
-    id: react-native-info
+    id: environment
     attributes:
       label: Environment info
-      description: Run `react-native info` in your terminal and paste the results here.
+      description: Run `npx react-native info`, or share your Expo SDK and React Native versions if using Expo.
       render: shell
     validations:
       required: true
+
   - type: textarea
-    id: steps-to-reproduce
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug. Include error messages, stack traces, or screenshots if helpful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
     attributes:
       label: Steps to reproduce
-      description: |
-        You must provide a clear list of steps and code to reproduce the problem.
       value: |
-        1. …
-        2. …
+        1.
+        2.
+        3.
     validations:
       required: true
-  - type: input
-    id: reproducible-example
+
+  - type: textarea
+    id: code-sample
     attributes:
-      label: Reproducible example repository 
-      description: Please provide a link to a repository on GitHub with a reproducible example.
-    validations:
-      required: true
+      label: Minimal code sample
+      description: How you call `ImageCodeScanner.scan(...)`, including image `path` source and `formats` if used.
+      render: typescript
+
+  - type: input
+    id: repro-repo
+    attributes:
+      label: Reproduction repository
+      description: Link to a minimal GitHub repo, if available.
+      placeholder: https://github.com/username/repo

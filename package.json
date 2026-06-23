@@ -45,14 +45,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nguyenthanhan/react-native-image-code-scanner.git"
+    "url": "git+https://github.com/anngth/react-native-image-code-scanner.git"
   },
-  "author": "Heimer Nguyen <heimer.nguyen@gmail.com> (https://github.com/nguyenthanhan)",
+  "author": "Heimer Nguyen <heimer.nguyen@gmail.com> (https://github.com/anngth)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/nguyenthanhan/react-native-image-code-scanner/issues"
+    "url": "https://github.com/anngth/react-native-image-code-scanner/issues"
   },
-  "homepage": "https://github.com/nguyenthanhan/react-native-image-code-scanner#readme",
+  "homepage": "https://github.com/anngth/react-native-image-code-scanner#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
