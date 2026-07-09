@@ -91,7 +91,8 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
       image.draw(in: CGRect(origin: .zero, size: newSizePx))
     }
     guard let cgImage = rendered.cgImage else { return image }
-    return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+    // draw() bakes EXIF orientation into pixels; keep metadata upright to avoid double rotation in Vision.
+    return UIImage(cgImage: cgImage, scale: image.scale, orientation: .up)
   }
 
   private func cgImagePropertyOrientation(from o: UIImage.Orientation) -> CGImagePropertyOrientation {
