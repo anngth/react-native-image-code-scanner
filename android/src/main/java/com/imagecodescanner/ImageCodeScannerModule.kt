@@ -121,10 +121,14 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
   }
 
   private fun readBooleanOption(options: ReadableMap, key: String, defaultValue: Boolean): Boolean {
-    return if (options.hasKey(key) && !options.isNull(key)) {
-      options.getBoolean(key)
-    } else {
-      defaultValue
+    if (!options.hasKey(key) || options.isNull(key)) {
+      return defaultValue
+    }
+
+    return when (options.getType(key)) {
+      ReadableType.Boolean -> options.getBoolean(key)
+      ReadableType.Number -> options.getDouble(key) != 0.0
+      else -> defaultValue
     }
   }
 
