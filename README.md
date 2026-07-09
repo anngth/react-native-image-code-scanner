@@ -58,11 +58,15 @@ If your app picks images from camera, add to `Info.plist`:
 
 ## Usage
 
-Works with any image picker — pass the local file URI to `scan()`:
+Works with any image picker — pass the local image URI to `scan()`.
+Android supports file paths, `file://` URIs, and `content://` URIs.
+iOS supports file paths and `file://` URIs, including percent-encoded paths.
 
 ```ts
 import * as ImagePicker from 'expo-image-picker';
-import ImageCodeScanner, { BarcodeFormat } from 'react-native-image-code-scanner';
+import ImageCodeScanner, {
+  BarcodeFormat,
+} from 'react-native-image-code-scanner';
 
 async function pickAndScan() {
   const picked = await ImagePicker.launchImageLibraryAsync({
@@ -92,6 +96,9 @@ ImageCodeScanner.scan(options: ScanOptions): Promise<ScanResult[]>
 interface ScanOptions {
   path: string;
   formats?: BarcodeFormat[]; // default: [QR_CODE]
+  enhanceContrast?: boolean; // default: true
+  convertToGrayscale?: boolean; // default: true
+  tryRotations?: boolean; // default: true
 }
 
 interface ScanResult {
@@ -104,7 +111,8 @@ interface ScanResult {
 
 **Supported formats:** `QR_CODE`, `CODE_128`, `CODE_39`, `CODE_93`, `EAN_13`, `EAN_8`, `UPC_A`, `UPC_E`, `PDF_417`, `DATA_MATRIX`, `AZTEC`, `ITF`, `CODABAR`
 
-Preprocessing runs automatically: original → grayscale → contrast enhancement → rotation retries.
+Preprocessing runs automatically by default: original → grayscale → contrast enhancement → rotation retries.
+Set `enhanceContrast`, `convertToGrayscale`, or `tryRotations` to `false` to skip those retry passes.
 
 ## Tips
 
@@ -122,6 +130,46 @@ Preprocessing runs automatically: original → grayscale → contrast enhancemen
 ## Example App
 
 See [example app](./example) and [example README](./example/README.md).
+
+## Publishing to npm
+
+1. Run checks:
+
+   ```bash
+   yarn typecheck
+   yarn lint
+   yarn test
+   yarn build
+   ```
+
+2. Create a release:
+
+   ```bash
+   yarn release
+   ```
+
+   This bumps the version and creates a `vX.Y.Z` tag.
+
+3. Push the release commit and tag:
+
+   ```bash
+   git push && git push --tags
+   ```
+
+GitHub Actions publishes to npm automatically after CI passes for the release tag.
+
+Verify the published version:
+
+```bash
+npm view react-native-image-code-scanner version
+```
+
+For a beta release:
+
+```bash
+yarn release:beta
+git push && git push --tags
+```
 
 ## Contributing
 
