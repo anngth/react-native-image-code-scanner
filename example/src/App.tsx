@@ -10,7 +10,6 @@ import {
   Image,
   SafeAreaView,
   Platform,
-  Switch,
 } from 'react-native';
 import ImageCodeScanner, {
   BarcodeFormat,
@@ -26,13 +25,27 @@ interface ScanResultWithTime {
 }
 
 const BARCODE_FORMATS = [
-  { key: BarcodeFormat.QR_CODE, label: 'QR Code' },
-  { key: BarcodeFormat.CODE_128, label: 'Code 128' },
-  { key: BarcodeFormat.CODE_39, label: 'Code 39' },
+  { key: BarcodeFormat.QR_CODE, label: 'QR' },
+  { key: BarcodeFormat.CODE_128, label: '128' },
+  { key: BarcodeFormat.CODE_39, label: '39' },
   { key: BarcodeFormat.EAN_13, label: 'EAN-13' },
+  { key: BarcodeFormat.EAN_8, label: 'EAN-8' },
+  { key: BarcodeFormat.UPC_A, label: 'UPC-A' },
+  { key: BarcodeFormat.UPC_E, label: 'UPC-E' },
   { key: BarcodeFormat.PDF_417, label: 'PDF417' },
-  { key: BarcodeFormat.DATA_MATRIX, label: 'Data Matrix' },
+  { key: BarcodeFormat.DATA_MATRIX, label: 'DM' },
+  { key: BarcodeFormat.AZTEC, label: 'Aztec' },
+  { key: BarcodeFormat.ITF, label: 'ITF' },
+  { key: BarcodeFormat.CODABAR, label: 'Codabar' },
 ];
+
+const PREPROCESSING_OPTIONS = [
+  { key: 'enhanceContrast', label: 'Contrast' },
+  { key: 'convertToGrayscale', label: 'Grayscale' },
+  { key: 'tryRotations', label: 'Rotate' },
+] as const;
+
+type PreprocessingOption = (typeof PREPROCESSING_OPTIONS)[number]['key'];
 
 export default function App() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -41,6 +54,39 @@ export default function App() {
   const [selectedFormats, setSelectedFormats] = useState<BarcodeFormat[]>([
     BarcodeFormat.QR_CODE,
   ]);
+  const [preprocessing, setPreprocessing] = useState<
+    Record<PreprocessingOption, boolean>
+  >({
+    enhanceContrast: true,
+    convertToGrayscale: true,
+    tryRotations: true,
+  });
+
+  const toggleFormat = (format: BarcodeFormat) => {
+    setSelectedFormats((prev) => {
+      if (prev.includes(format)) {
+        if (prev.length === 1) {
+          Alert.alert(
+            'Format Required',
+            'At least one format must be selected'
+          );
+          return prev;
+        }
+        return prev.filter((item) => item !== format);
+      }
+      return [...prev, format];
+    });
+  };
+
+  const setPreprocessingOption = (
+    option: PreprocessingOption,
+    value: boolean
+  ) => {
+    setPreprocessing((prev) => ({
+      ...prev,
+      [option]: value,
+    }));
+  };
 
   const requestPermissions = async () => {
     const { status: cameraStatus } =
@@ -106,7 +152,7 @@ export default function App() {
       const results = await ImageCodeScanner.scan({
         path: selectedImage,
         formats: selectedFormats,
-        // Preprocessing is always enabled automatically for optimal results
+        ...preprocessing,
       });
 
       const endTime = Date.now();
@@ -136,24 +182,22 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Text style={styles.title}>Image Code Scanner</Text>
-          <Text style={styles.subtitle}>Test all features with Expo</Text>
         </View>
 
         {/* Image Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Image</Text>
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={styles.button}
               onPress={() => handleImagePicker('camera')}
             >
-              <Text style={styles.buttonText}>📷 Camera</Text>
+              <Text style={styles.buttonText}>Camera</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.button}
               onPress={() => handleImagePicker('gallery')}
             >
-              <Text style={styles.buttonText}>🖼️ Gallery</Text>
+              <Text style={styles.buttonText}>Gallery</Text>
             </TouchableOpacity>
           </View>
 
@@ -167,55 +211,82 @@ export default function App() {
           )}
         </View>
 
-        {/* Barcode Format Selection */}
+        {/* Scan Options */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Barcode Formats</Text>
-          <Text style={styles.sectionSubtitle}>
-            Select formats to scan for:
-          </Text>
-          {BARCODE_FORMATS.map((format) => (
-            <View key={format.key} style={styles.optionRow}>
-              <Text>{format.label}</Text>
-              <Switch
-                value={selectedFormats.includes(format.key)}
-                onValueChange={(value) => {
-                  if (value) {
-                    setSelectedFormats((prev) =>
-                      prev.includes(format.key) ? prev : [...prev, format.key]
-                    );
-                  } else {
-                    setSelectedFormats((prev) => {
-                      if (prev.length === 1) {
-                        Alert.alert(
-                          'Format Required',
-                          'At least one format must be selected'
-                        );
-                        return prev;
-                      }
-                      return prev.filter((f) => f !== format.key);
-                    });
-                  }
-                }}
-              />
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Formats</Text>
+            <View style={styles.presetRow}>
+              <TouchableOpacity
+                style={styles.presetButton}
+                onPress={() =>
+                  setSelectedFormats(
+                    BARCODE_FORMATS.map((format) => format.key)
+                  )
+                }
+              >
+                <Text style={styles.presetText}>All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.presetButton}
+                onPress={() => setSelectedFormats([BarcodeFormat.QR_CODE])}
+              >
+                <Text style={styles.presetText}>QR</Text>
+              </TouchableOpacity>
             </View>
-          ))}
-        </View>
-
-        {/* Automatic Preprocessing Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Automatic Preprocessing</Text>
-          <Text style={styles.sectionSubtitle}>
-            The following enhancements are automatically applied:
-          </Text>
-
-          <View style={styles.infoRow}>
-            <Text>• Grayscale conversion for better barcode detection</Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text>• Contrast enhancement for improved readability</Text>
+
+          <View style={styles.formatGrid}>
+            {BARCODE_FORMATS.map((format) => {
+              const selected = selectedFormats.includes(format.key);
+              return (
+                <TouchableOpacity
+                  key={format.key}
+                  style={[styles.chip, selected && styles.selectedChip]}
+                  onPress={() => toggleFormat(format.key)}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selected && styles.selectedChipText,
+                    ]}
+                  >
+                    {format.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          <View style={styles.infoRow}>
-            <Text>• Automatic rotation detection (0°, 90°, 180°, 270°)</Text>
+
+          <View style={styles.divider} />
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Preprocessing</Text>
+          </View>
+          <View style={styles.optionGrid}>
+            {PREPROCESSING_OPTIONS.map((option) => {
+              const selected = preprocessing[option.key];
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[styles.optionChip, selected && styles.selectedOption]}
+                  onPress={() =>
+                    setPreprocessingOption(
+                      option.key,
+                      !preprocessing[option.key]
+                    )
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.optionText,
+                      selected && styles.selectedOptionText,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -264,53 +335,47 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   scrollContent: {
-    padding: 16,
+    padding: 14,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 14,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#333',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
   },
   section: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 8,
     color: '#333',
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
+    gap: 8,
   },
   button: {
     flex: 1,
     backgroundColor: '#007AFF',
-    padding: 12,
+    paddingVertical: 11,
     borderRadius: 8,
     alignItems: 'center',
   },
@@ -320,31 +385,95 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   imageContainer: {
-    marginTop: 16,
+    marginTop: 10,
     alignItems: 'center',
   },
   previewImage: {
     width: '100%',
-    height: 200,
+    height: 160,
     borderRadius: 8,
     resizeMode: 'contain',
     backgroundColor: '#f0f0f0',
   },
-  optionRow: {
+  presetRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 6,
+  },
+  presetButton: {
+    borderWidth: 1,
+    borderColor: '#D7DEE8',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  presetText: {
+    color: '#007AFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  formatGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    minWidth: 58,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D7DEE8',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 999,
+    paddingHorizontal: 10,
     paddingVertical: 8,
   },
-  infoRow: {
-    paddingVertical: 4,
+  selectedChip: {
+    backgroundColor: '#E8F2FF',
+    borderColor: '#007AFF',
+  },
+  chipText: {
+    color: '#334155',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  selectedChipText: {
+    color: '#0057C2',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#EEF2F6',
+    marginVertical: 12,
+  },
+  optionGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  optionChip: {
+    flex: 1,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D7DEE8',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    paddingVertical: 9,
+  },
+  selectedOption: {
+    backgroundColor: '#ECFDF3',
+    borderColor: '#2EAD63',
+  },
+  optionText: {
+    color: '#334155',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  selectedOptionText: {
+    color: '#168046',
   },
   scanButton: {
     backgroundColor: '#4CAF50',
-    padding: 16,
+    padding: 15,
     borderRadius: 8,
     alignItems: 'center',
-    marginVertical: 16,
+    marginBottom: 12,
   },
   disabledButton: {
     backgroundColor: '#ccc',
