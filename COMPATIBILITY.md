@@ -4,19 +4,19 @@
 
 ### React Native Versions
 
-| React Native | Package Version | Architecture Support           | Notes                     |
-| ------------ | --------------- | ------------------------------ | ------------------------- |
-| 0.70.x       | ✅ 1.1.x        | Old Architecture               | Full support              |
-| 0.71.x       | ✅ 1.1.x        | Old Architecture               | Full support              |
-| 0.72.x       | ✅ 1.1.x        | Old Architecture               | Full support              |
-| 0.73.x       | ✅ 1.1.x        | Old & New Architecture         | Full support              |
-| 0.74.x       | ✅ 1.1.x        | Old & New Architecture         | Full support              |
-| 0.75.x       | ✅ 1.1.x        | Old & New Architecture         | Full support              |
-| 0.76.x       | ✅ 1.1.x        | New Architecture (default)     | Full support              |
-| 0.77.x       | ✅ 1.1.x        | New Architecture (default)     | Full support              |
-| 0.78.x       | ✅ 1.1.x        | New Architecture (default)     | Full support              |
-| **0.79.x**   | ✅ **1.1.x**    | **New Architecture (default)** | **Latest - Full support** |
-| 0.80.x+      | 🔜 1.1.x        | New Architecture               | Ready when released       |
+| React Native | Package Version | Architecture Support           | Notes                 |
+| ------------ | --------------- | ------------------------------ | --------------------- |
+| 0.70.x       | ✅ 1.1.x        | Old Architecture               | Full support          |
+| 0.71.x       | ✅ 1.1.x        | Old Architecture               | Full support          |
+| 0.72.x       | ✅ 1.1.x        | Old Architecture               | Full support          |
+| 0.73.x       | ✅ 1.1.x        | Old & New Architecture         | Full support          |
+| 0.74.x       | ✅ 1.1.x        | Old & New Architecture         | Full support          |
+| 0.75.x       | ✅ 1.1.x        | Old & New Architecture         | Full support          |
+| 0.76.x       | ✅ 1.1.x        | New Architecture (default)     | Full support          |
+| 0.77.x       | ✅ 1.1.x        | New Architecture (default)     | Full support          |
+| 0.78.x       | ✅ 1.1.x        | New Architecture (default)     | Full support          |
+| **0.79.x**   | ✅ **1.1.x**    | **New Architecture (default)** | **Full support**      |
+| 0.80.x+      | 🔜 1.1.x        | New Architecture               | Compatibility pending |
 
 ### React Versions
 
@@ -28,12 +28,12 @@
 
 ### Expo SDK Compatibility
 
-| Expo SDK   | React Native | Package Version | Status                                        |
-| ---------- | ------------ | --------------- | --------------------------------------------- |
-| SDK 49     | 0.72.x       | ✅ 1.1.x        | Supported (requires prebuild)                 |
-| SDK 50     | 0.73.x       | ✅ 1.1.x        | Supported (requires prebuild)                 |
-| SDK 51     | 0.74.x       | ✅ 1.1.x        | Supported (requires prebuild)                 |
-| **SDK 52** | **0.79.x**   | ✅ **1.1.x**    | **Latest - Full support (requires prebuild)** |
+| Expo SDK   | React Native | Package Version | Status                                       |
+| ---------- | ------------ | --------------- | -------------------------------------------- |
+| SDK 49     | 0.72.x       | ✅ 1.1.x        | Supported (requires prebuild)                |
+| SDK 50     | 0.73.x       | ✅ 1.1.x        | Supported (requires prebuild)                |
+| SDK 51     | 0.74.x       | ✅ 1.1.x        | Supported (requires prebuild)                |
+| **SDK 52** | **0.76.x**   | ✅ **1.1.x**    | **Example app baseline (requires prebuild)** |
 
 **Note**: This library requires prebuild for Expo projects as it uses native modules.
 
@@ -53,8 +53,8 @@
 ### Android Requirements
 
 - **Minimum SDK**: 21 (Android 5.0 Lollipop)
-- **Target SDK**: 33+ (Android 13+)
-- **Compile SDK**: 33+
+- **Target SDK**: 34+ (Android 14+)
+- **Compile SDK**: 35+
 - **Kotlin**: 1.6.0+
 - **Gradle**: 7.0+
 - **Android Gradle Plugin**: 7.0+
