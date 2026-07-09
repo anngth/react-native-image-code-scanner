@@ -13,6 +13,7 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
   
   // Shared CIContext for reuse across image processing operations
   private let sharedCIContext = CIContext(options: nil)
+  private let maxImageDimension: CGFloat = 2048
 
   // MARK: - Image Preprocessing Methods
   
@@ -89,7 +90,8 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
     let rendered = UIGraphicsImageRenderer(size: newSizePx, format: format).image { _ in
       image.draw(in: CGRect(origin: .zero, size: newSizePx))
     }
-    return UIImage(cgImage: rendered.cgImage!, scale: image.scale, orientation: image.imageOrientation)
+    guard let cgImage = rendered.cgImage else { return image }
+    return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
   }
 
   private func cgImagePropertyOrientation(from o: UIImage.Orientation) -> CGImagePropertyOrientation {
@@ -175,7 +177,7 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
       return
     }
     
-    let baseImage = scaleImageIfNeeded(originalImage, maxDimension: 2048)
+    let baseImage = scaleImageIfNeeded(originalImage, maxDimension: maxImageDimension)
     var imagesToTry: [(String, UIImage)] = [("Original", baseImage)]
 
     if shouldConvertToGrayscale {
