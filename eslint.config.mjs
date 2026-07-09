@@ -18,7 +18,10 @@ export default [
     ignores: [
       'node_modules/**',
       'lib/**',
-      'example/**',
+      'example/android/**',
+      'example/ios/**',
+      'example/node_modules/**',
+      'example/.expo/**',
       'coverage/**',
       'build/**',
       '.yarn/**',

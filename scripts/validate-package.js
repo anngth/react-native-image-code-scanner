@@ -15,7 +15,7 @@ const requiredFiles = [
   'tsconfig.json',
   'tsconfig.build.json',
   '.npmignore',
-  'ImageCodeScanner.podspec',
+  'RNImageCodeScanner.podspec',
   // Source files
   'src/index.tsx',
   'src/NativeImageCodeScanner.ts',
