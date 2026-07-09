@@ -271,7 +271,7 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
       
       // Create Vision request for barcode detection
       let request = VNDetectBarcodesRequest { request, error in
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [self] in
           if let error = error {
             debugLog("ImageCodeScanner iOS - \(description) failed: \(error.localizedDescription)")
             // Try next image
@@ -373,7 +373,7 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
         do {
           try handler.perform([request])
         } catch {
-          DispatchQueue.main.async {
+          DispatchQueue.main.async { [self] in
             debugLog("ImageCodeScanner iOS - \(description) perform error: \(error.localizedDescription)")
             // Try next image
             tryScanning(images: images, index: index + 1)
