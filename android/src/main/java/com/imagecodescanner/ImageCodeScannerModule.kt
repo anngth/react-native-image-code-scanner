@@ -19,6 +19,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileInputStream
 import java.io.InputStream
+import java.util.concurrent.atomic.AtomicBoolean
 
 @ReactModule(name = ImageCodeScannerModule.NAME)
 class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
@@ -47,18 +48,17 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
   }
 
   private fun scaleBitmapIfNeeded(bitmap: Bitmap): Bitmap {
-    val maxSize = 1024 // Max width or height
     val width = bitmap.width
     val height = bitmap.height
     
-    if (width <= maxSize && height <= maxSize) {
+    if (width <= MAX_IMAGE_DIMENSION && height <= MAX_IMAGE_DIMENSION) {
       return bitmap
     }
     
     val scale = if (width > height) {
-      maxSize.toFloat() / width
+      MAX_IMAGE_DIMENSION.toFloat() / width
     } else {
-      maxSize.toFloat() / height
+      MAX_IMAGE_DIMENSION.toFloat() / height
     }
     
     val newWidth = (width * scale).toInt()
@@ -157,8 +157,7 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
     }
 
     var sampleSize = 1
-    val maxDimension = 2048
-    while (boundsOptions.outWidth / sampleSize > maxDimension || boundsOptions.outHeight / sampleSize > maxDimension) {
+    while (boundsOptions.outWidth / sampleSize > MAX_IMAGE_DIMENSION || boundsOptions.outHeight / sampleSize > MAX_IMAGE_DIMENSION) {
       sampleSize *= 2
     }
 
@@ -178,29 +177,46 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
       "Starting scan with preprocessing options: enhanceContrast=$shouldEnhanceContrast, convertToGrayscale=$shouldConvertToGrayscale, tryRotations=$shouldTryRotations"
     )
 
-    val imagesToTry = mutableListOf<Pair<String, Bitmap>>()
+    var baseBitmap: Bitmap? = null
+    val hasResolved = AtomicBoolean(false)
+
+    fun safeResolve(value: Any?) {
+      if (hasResolved.compareAndSet(false, true)) {
+        promise.resolve(value)
+      }
+    }
+
+    fun safeReject(code: String, message: String, error: Throwable?) {
+      if (hasResolved.compareAndSet(false, true)) {
+        promise.reject(code, message, error)
+      }
+    }
 
     fun cleanupBitmaps() {
-      val recycled = mutableSetOf<Int>()
-      imagesToTry.forEach { (_, bitmap) ->
-        val identity = System.identityHashCode(bitmap)
-        if (!bitmap.isRecycled && recycled.add(identity)) {
+      baseBitmap?.let { bitmap ->
+        if (!bitmap.isRecycled) {
           bitmap.recycle()
         }
       }
-      imagesToTry.clear()
+      baseBitmap = null
+    }
+
+    fun cleanupAttemptBitmap(bitmap: Bitmap) {
+      if (bitmap !== baseBitmap && !bitmap.isRecycled) {
+        bitmap.recycle()
+      }
     }
 
     try {
       val originalBitmap = decodeBitmapFromPath(path)
       if (originalBitmap == null) {
-        promise.reject("INVALID_IMAGE", "Cannot decode image file: $path", null)
+        safeReject("INVALID_IMAGE", "Cannot decode image file: $path", null)
         return
       }
       
       // Scale if needed for better processing
-      val bitmap = scaleBitmapIfNeeded(originalBitmap)
-      if (bitmap !== originalBitmap && !originalBitmap.isRecycled) {
+      baseBitmap = scaleBitmapIfNeeded(originalBitmap)
+      if (baseBitmap !== originalBitmap && !originalBitmap.isRecycled) {
         originalBitmap.recycle()
       }
 
@@ -240,51 +256,54 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
         .setBarcodeFormats(barcodeFormats.first(), *barcodeFormats.drop(1).toIntArray())
         .build()
 
-      // List of images to try with enabled preprocessing passes.
-      imagesToTry.add("Original" to bitmap)
-      
+      val attempts = mutableListOf<Pair<String, () -> Bitmap>>()
+      attempts.add("Original" to { baseBitmap ?: throw IllegalStateException("Base bitmap has been recycled") })
+
       if (shouldConvertToGrayscale) {
-        try {
-          imagesToTry.add("Grayscale" to convertToGrayscale(bitmap))
-          debugLog("Added grayscale version")
-        } catch (e: Exception) {
-          debugWarn("Failed to create grayscale: ${e.message}")
-        }
+        attempts.add("Grayscale" to {
+          convertToGrayscale(baseBitmap ?: throw IllegalStateException("Base bitmap has been recycled"))
+        })
       }
       
       if (shouldEnhanceContrast) {
-        try {
-          imagesToTry.add("Enhanced contrast" to enhanceContrast(bitmap))
-          debugLog("Added contrast enhanced version")
-        } catch (e: Exception) {
-          debugWarn("Failed to enhance contrast: ${e.message}")
-        }
+        attempts.add("Enhanced contrast" to {
+          enhanceContrast(baseBitmap ?: throw IllegalStateException("Base bitmap has been recycled"))
+        })
       }
       
       if (shouldTryRotations) {
-        try {
-          imagesToTry.add("Rotated 90°" to rotateBitmap(bitmap, 90f))
-          imagesToTry.add("Rotated 180°" to rotateBitmap(bitmap, 180f))
-          imagesToTry.add("Rotated 270°" to rotateBitmap(bitmap, 270f))
-          debugLog("Added rotated versions")
-        } catch (e: Exception) {
-          debugWarn("Failed to rotate: ${e.message}")
-        }
+        attempts.add("Rotated 90°" to {
+          rotateBitmap(baseBitmap ?: throw IllegalStateException("Base bitmap has been recycled"), 90f)
+        })
+        attempts.add("Rotated 180°" to {
+          rotateBitmap(baseBitmap ?: throw IllegalStateException("Base bitmap has been recycled"), 180f)
+        })
+        attempts.add("Rotated 270°" to {
+          rotateBitmap(baseBitmap ?: throw IllegalStateException("Base bitmap has been recycled"), 270f)
+        })
       }
       
       var currentIndex = 0
       
       fun tryNextImage() {
-        if (currentIndex >= imagesToTry.size) {
+        if (currentIndex >= attempts.size) {
           // No more images to try, return empty result
           val arr = Arguments.fromList(emptyList<String>())
           cleanupBitmaps()
-          promise.resolve(arr)
+          safeResolve(arr)
           return
         }
         
-        val (description, currentBitmap) = imagesToTry[currentIndex]
+        val (description, createBitmap) = attempts[currentIndex]
         currentIndex++
+
+        val currentBitmap = try {
+          createBitmap()
+        } catch (e: Exception) {
+          debugWarn("Failed to create $description image: ${e.message}")
+          tryNextImage()
+          return
+        }
         
         val image = InputImage.fromBitmap(currentBitmap, 0)
         val scanner = BarcodeScanning.getClient(scannerOptions)
@@ -323,14 +342,17 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
                 
                 val arr = Arguments.createArray()
                 codes.forEach { code -> arr.pushMap(code) }
+                cleanupAttemptBitmap(currentBitmap)
                 cleanupBitmaps()
-                promise.resolve(arr)
+                safeResolve(arr)
               } else {
                 // No barcodes found, try next preprocessing
+                cleanupAttemptBitmap(currentBitmap)
                 tryNextImage()
               }
             } catch (e: Exception) {
               debugError("Error processing results for $description", e)
+              cleanupAttemptBitmap(currentBitmap)
               tryNextImage()
             } finally {
               scanner.close()
@@ -338,6 +360,7 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
           }
           .addOnFailureListener { exception ->
             debugError("Scan failed for $description: ${exception.message}", exception)
+            cleanupAttemptBitmap(currentBitmap)
             scanner.close()
             tryNextImage()
           }
@@ -349,9 +372,9 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
     } catch (e: Exception) {
       cleanupBitmaps()
       if (e is FileNotFoundException || e is SecurityException) {
-        promise.reject("INVALID_PATH", "Image file does not exist or cannot be opened: $path", e)
+        safeReject("INVALID_PATH", "Image file does not exist or cannot be opened: $path", e)
       } else {
-        promise.reject("IMAGE_LOAD_ERROR", "Error loading image: ${e.message}", e)
+        safeReject("IMAGE_LOAD_ERROR", "Error loading image: ${e.message}", e)
       }
     }
   }
@@ -359,5 +382,6 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
   companion object {
     const val NAME = "ImageCodeScanner"
     private const val TAG = "ImageCodeScanner"
+    private const val MAX_IMAGE_DIMENSION = 2048
   }
 }
