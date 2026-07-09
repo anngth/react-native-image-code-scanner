@@ -75,6 +75,28 @@ describe('ImageCodeScanner', () => {
     );
   });
 
+  it('passes preprocessing options through to native', async () => {
+    scanFromPathMock.mockResolvedValueOnce([]);
+
+    await ImageCodeScanner.scan({
+      path: 'file:///tmp/example.png',
+      formats: [BarcodeFormat.QR_CODE],
+      enhanceContrast: false,
+      convertToGrayscale: false,
+      tryRotations: false,
+    });
+
+    expect(scanFromPathMock).toHaveBeenCalledWith(
+      'file:///tmp/example.png',
+      [BarcodeFormat.QR_CODE],
+      {
+        enhanceContrast: false,
+        convertToGrayscale: false,
+        tryRotations: false,
+      }
+    );
+  });
+
   it('passes UPC_A as the only requested format', async () => {
     scanFromPathMock.mockResolvedValueOnce([]);
 

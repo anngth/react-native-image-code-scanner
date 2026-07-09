@@ -20,11 +20,20 @@ export enum BarcodeFormat {
 export interface ScanOptions {
   path: string;
   formats?: BarcodeFormat[];
+  enhanceContrast?: boolean;
+  convertToGrayscale?: boolean;
+  tryRotations?: boolean;
 }
 
 const ImageCodeScannerModule = {
   scan: (options: ScanOptions): Promise<ScanResult[]> => {
-    const { path, formats = [BarcodeFormat.QR_CODE] } = options;
+    const {
+      path,
+      formats = [BarcodeFormat.QR_CODE],
+      enhanceContrast = true,
+      convertToGrayscale = true,
+      tryRotations = true,
+    } = options;
     if (!path) {
       return Promise.reject(new Error('Image path is required'));
     }
@@ -33,12 +42,10 @@ const ImageCodeScannerModule = {
         ? formats
         : [BarcodeFormat.QR_CODE];
 
-    // Note: Preprocessing is always enabled in native implementation
-    // The native code automatically tries multiple preprocessing techniques
     const nativeOptions = {
-      enhanceContrast: true,
-      convertToGrayscale: true,
-      tryRotations: true,
+      enhanceContrast,
+      convertToGrayscale,
+      tryRotations,
     };
 
     return ImageCodeScanner.scanFromPath(

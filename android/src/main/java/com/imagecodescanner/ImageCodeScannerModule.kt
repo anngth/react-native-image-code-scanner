@@ -7,6 +7,7 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.net.Uri
 import com.imagecodescanner.NativeImageCodeScannerSpec
 import com.facebook.react.bridge.*
 import com.facebook.react.module.annotations.ReactModule
@@ -15,6 +16,9 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.io.File
+import java.io.FileNotFoundException
+import java.io.FileInputStream
+import java.io.InputStream
 
 @ReactModule(name = ImageCodeScannerModule.NAME)
 class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
@@ -22,6 +26,24 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
 
   override fun getName(): String {
     return NAME
+  }
+
+  private fun debugLog(message: String) {
+    if (BuildConfig.DEBUG) {
+      android.util.Log.d(TAG, message)
+    }
+  }
+
+  private fun debugWarn(message: String) {
+    if (BuildConfig.DEBUG) {
+      android.util.Log.w(TAG, message)
+    }
+  }
+
+  private fun debugError(message: String, throwable: Throwable) {
+    if (BuildConfig.DEBUG) {
+      android.util.Log.e(TAG, message, throwable)
+    }
   }
 
   private fun scaleBitmapIfNeeded(bitmap: Bitmap): Bitmap {
@@ -97,18 +119,60 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
     matrix.postRotate(degrees)
     return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
   }
+
+  private fun readBooleanOption(options: ReadableMap, key: String, defaultValue: Boolean): Boolean {
+    return if (options.hasKey(key) && !options.isNull(key)) {
+      options.getBoolean(key)
+    } else {
+      defaultValue
+    }
+  }
+
+  private fun openImageInputStream(path: String): InputStream {
+    val uri = Uri.parse(path)
+    return when (uri.scheme?.lowercase()) {
+      null, "" -> FileInputStream(File(Uri.decode(path)))
+      "file" -> {
+        val filePath = uri.path ?: Uri.decode(path.removePrefix("file://"))
+        FileInputStream(File(filePath))
+      }
+      else -> reactApplicationContext.contentResolver.openInputStream(uri)
+        ?: throw IllegalArgumentException("Cannot open image URI: $path")
+    }
+  }
+
+  private fun decodeBitmapFromPath(path: String): Bitmap? {
+    val boundsOptions = BitmapFactory.Options()
+    boundsOptions.inJustDecodeBounds = true
+    openImageInputStream(path).use { input ->
+      BitmapFactory.decodeStream(input, null, boundsOptions)
+    }
+
+    if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) {
+      return null
+    }
+
+    var sampleSize = 1
+    val maxDimension = 2048
+    while (boundsOptions.outWidth / sampleSize > maxDimension || boundsOptions.outHeight / sampleSize > maxDimension) {
+      sampleSize *= 2
+    }
+
+    val bitmapOptions = BitmapFactory.Options()
+    bitmapOptions.inSampleSize = sampleSize
+    return openImageInputStream(path).use { input ->
+      BitmapFactory.decodeStream(input, null, bitmapOptions)
+    }
+  }
   
   override fun scanFromPath(path: String, formats: ReadableArray, options: ReadableMap, promise: Promise) {
-    android.util.Log.d("ImageCodeScanner", "scanFromPath called with path: $path")
-    android.util.Log.d("ImageCodeScanner", "Starting scan with all preprocessing options enabled")
-    
-    val cleanPath = path.replace("file://", "")
-    val imgFile = File(cleanPath)
-    
-    if (!imgFile.exists()) {
-      promise.reject("INVALID_PATH", "Image file does not exist: $path", null)
-      return
-    }
+    debugLog("scanFromPath called with path: $path")
+    val shouldEnhanceContrast = readBooleanOption(options, "enhanceContrast", true)
+    val shouldConvertToGrayscale = readBooleanOption(options, "convertToGrayscale", true)
+    val shouldTryRotations = readBooleanOption(options, "tryRotations", true)
+    debugLog(
+      "Starting scan with preprocessing options: enhanceContrast=$shouldEnhanceContrast, convertToGrayscale=$shouldConvertToGrayscale, tryRotations=$shouldTryRotations"
+    )
 
     val imagesToTry = mutableListOf<Pair<String, Bitmap>>()
 
@@ -124,22 +188,7 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
     }
 
     try {
-      // Load and validate bitmap with sampling if too large
-      val bitmapOptions = BitmapFactory.Options()
-      bitmapOptions.inJustDecodeBounds = true
-      BitmapFactory.decodeFile(imgFile.absolutePath, bitmapOptions)
-      
-      // Calculate sample size if image is too large
-      var sampleSize = 1
-      val maxDimension = 2048
-      while (bitmapOptions.outWidth / sampleSize > maxDimension || bitmapOptions.outHeight / sampleSize > maxDimension) {
-        sampleSize *= 2
-      }
-      
-      bitmapOptions.inJustDecodeBounds = false
-      bitmapOptions.inSampleSize = sampleSize
-      
-      val originalBitmap = BitmapFactory.decodeFile(imgFile.absolutePath, bitmapOptions)
+      val originalBitmap = decodeBitmapFromPath(path)
       if (originalBitmap == null) {
         promise.reject("INVALID_IMAGE", "Cannot decode image file: $path", null)
         return
@@ -172,7 +221,7 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
           "CODABAR" -> barcodeFormats.add(Barcode.FORMAT_CODABAR)
           else -> {
             // Log unsupported format but continue
-            android.util.Log.w("ImageCodeScanner", "Unsupported format: $format")
+            debugWarn("Unsupported format: $format")
           }
         }
       }
@@ -187,33 +236,36 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
         .setBarcodeFormats(barcodeFormats.first(), *barcodeFormats.drop(1).toIntArray())
         .build()
 
-      // List of images to try with different preprocessing - always try all options
+      // List of images to try with enabled preprocessing passes.
       imagesToTry.add("Original" to bitmap)
       
-      // Always add grayscale version
-      try {
-        imagesToTry.add("Grayscale" to convertToGrayscale(bitmap))
-        android.util.Log.d("ImageCodeScanner", "Added grayscale version")
-      } catch (e: Exception) {
-        android.util.Log.w("ImageCodeScanner", "Failed to create grayscale: ${e.message}")
+      if (shouldConvertToGrayscale) {
+        try {
+          imagesToTry.add("Grayscale" to convertToGrayscale(bitmap))
+          debugLog("Added grayscale version")
+        } catch (e: Exception) {
+          debugWarn("Failed to create grayscale: ${e.message}")
+        }
       }
       
-      // Always add enhanced contrast version
-      try {
-        imagesToTry.add("Enhanced contrast" to enhanceContrast(bitmap))
-        android.util.Log.d("ImageCodeScanner", "Added contrast enhanced version")
-      } catch (e: Exception) {
-        android.util.Log.w("ImageCodeScanner", "Failed to enhance contrast: ${e.message}")
+      if (shouldEnhanceContrast) {
+        try {
+          imagesToTry.add("Enhanced contrast" to enhanceContrast(bitmap))
+          debugLog("Added contrast enhanced version")
+        } catch (e: Exception) {
+          debugWarn("Failed to enhance contrast: ${e.message}")
+        }
       }
       
-      // Always add rotated versions
-      try {
-        imagesToTry.add("Rotated 90°" to rotateBitmap(bitmap, 90f))
-        imagesToTry.add("Rotated 180°" to rotateBitmap(bitmap, 180f))
-        imagesToTry.add("Rotated 270°" to rotateBitmap(bitmap, 270f))
-        android.util.Log.d("ImageCodeScanner", "Added rotated versions")
-      } catch (e: Exception) {
-        android.util.Log.w("ImageCodeScanner", "Failed to rotate: ${e.message}")
+      if (shouldTryRotations) {
+        try {
+          imagesToTry.add("Rotated 90°" to rotateBitmap(bitmap, 90f))
+          imagesToTry.add("Rotated 180°" to rotateBitmap(bitmap, 180f))
+          imagesToTry.add("Rotated 270°" to rotateBitmap(bitmap, 270f))
+          debugLog("Added rotated versions")
+        } catch (e: Exception) {
+          debugWarn("Failed to rotate: ${e.message}")
+        }
       }
       
       var currentIndex = 0
@@ -264,7 +316,6 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
                       resultMap
                     } else null
                   }
-                  .filter { it != null }
                 
                 val arr = Arguments.createArray()
                 codes.forEach { code -> arr.pushMap(code) }
@@ -275,14 +326,14 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
                 tryNextImage()
               }
             } catch (e: Exception) {
-              android.util.Log.e("ImageCodeScanner", "Error processing results for $description", e)
+              debugError("Error processing results for $description", e)
               tryNextImage()
             } finally {
               scanner.close()
             }
           }
           .addOnFailureListener { exception ->
-            android.util.Log.e("ImageCodeScanner", "Scan failed for $description: ${exception.message}")
+            debugError("Scan failed for $description: ${exception.message}", exception)
             scanner.close()
             tryNextImage()
           }
@@ -293,11 +344,16 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
         
     } catch (e: Exception) {
       cleanupBitmaps()
-      promise.reject("IMAGE_LOAD_ERROR", "Error loading image: ${e.message}", e)
+      if (e is FileNotFoundException || e is SecurityException) {
+        promise.reject("INVALID_PATH", "Image file does not exist or cannot be opened: $path", e)
+      } else {
+        promise.reject("IMAGE_LOAD_ERROR", "Error loading image: ${e.message}", e)
+      }
     }
   }
 
   companion object {
     const val NAME = "ImageCodeScanner"
+    private const val TAG = "ImageCodeScanner"
   }
 }

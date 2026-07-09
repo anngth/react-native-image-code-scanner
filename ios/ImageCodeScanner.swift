@@ -111,15 +111,43 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
     return payload.allSatisfy(\.isNumber)
   }
 
+  private func boolOption(_ options: NSDictionary, key: String, default defaultValue: Bool) -> Bool {
+    guard let value = options[key] else { return defaultValue }
+    if let boolValue = value as? Bool {
+      return boolValue
+    }
+    if let numberValue = value as? NSNumber {
+      return numberValue.boolValue
+    }
+    return defaultValue
+  }
+
+  private func filePath(from path: String) -> String {
+    if let url = URL(string: path), url.isFileURL {
+      return url.path
+    }
+    return path.removingPercentEncoding ?? path
+  }
+
+  private func debugLog(_ message: @autoclosure () -> String) {
+    #if DEBUG
+      print(message())
+    #endif
+  }
+
   @objc(scanFromPath:formats:options:resolver:rejecter:)
   func scanFromPath(_ path: String,
                     formats: [String],
                     options: NSDictionary,
                     resolver: @escaping RCTPromiseResolveBlock,
                     rejecter: @escaping RCTPromiseRejectBlock) {
-    
-    print("ImageCodeScanner iOS - Starting scan with all preprocessing options enabled")
-    
+
+    let shouldEnhanceContrast = boolOption(options, key: "enhanceContrast", default: true)
+    let shouldConvertToGrayscale = boolOption(options, key: "convertToGrayscale", default: true)
+    let shouldTryRotations = boolOption(options, key: "tryRotations", default: true)
+
+    debugLog("ImageCodeScanner iOS - Starting scan with preprocessing options: enhanceContrast=\(shouldEnhanceContrast), convertToGrayscale=\(shouldConvertToGrayscale), tryRotations=\(shouldTryRotations)")
+
     // Use atomic flag to prevent multiple promise calls
     var hasResolved = false
     let resolveQueue = DispatchQueue(label: "ImageCodeScanner.resolve")
@@ -140,8 +168,7 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
       }
     }
     
-    // Remove file:// prefix if present
-    let cleanPath = path.replacingOccurrences(of: "file://", with: "")
+    let cleanPath = filePath(from: path)
     
     guard let originalImage = UIImage(contentsOfFile: cleanPath) else {
       safeReject("INVALID_IMAGE", "Cannot load image from path: \(path)", nil)
@@ -149,32 +176,34 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
     }
     
     let baseImage = scaleImageIfNeeded(originalImage, maxDimension: 2048)
-    // Prepare images to try - always try all preprocessing options
     var imagesToTry: [(String, UIImage)] = [("Original", baseImage)]
 
-    // Always add grayscale version
-    if let grayscaleImage = convertToGrayscale(baseImage) {
-      imagesToTry.append(("Grayscale", grayscaleImage))
-      print("ImageCodeScanner iOS - Added grayscale version")
+    if shouldConvertToGrayscale {
+      if let grayscaleImage = convertToGrayscale(baseImage) {
+        imagesToTry.append(("Grayscale", grayscaleImage))
+        debugLog("ImageCodeScanner iOS - Added grayscale version")
+      }
     }
     
-    // Always add contrast enhanced version
-    if let contrastImage = enhanceContrast(baseImage) {
-      imagesToTry.append(("Enhanced contrast", contrastImage))
-      print("ImageCodeScanner iOS - Added contrast enhanced version")
+    if shouldEnhanceContrast {
+      if let contrastImage = enhanceContrast(baseImage) {
+        imagesToTry.append(("Enhanced contrast", contrastImage))
+        debugLog("ImageCodeScanner iOS - Added contrast enhanced version")
+      }
     }
     
-    // Always add rotated versions
-    if let rotated90 = rotateImage(baseImage, degrees: 90) {
-      imagesToTry.append(("Rotated 90°", rotated90))
+    if shouldTryRotations {
+      if let rotated90 = rotateImage(baseImage, degrees: 90) {
+        imagesToTry.append(("Rotated 90°", rotated90))
+      }
+      if let rotated180 = rotateImage(baseImage, degrees: 180) {
+        imagesToTry.append(("Rotated 180°", rotated180))
+      }
+      if let rotated270 = rotateImage(baseImage, degrees: 270) {
+        imagesToTry.append(("Rotated 270°", rotated270))
+      }
+      debugLog("ImageCodeScanner iOS - Added rotated versions")
     }
-    if let rotated180 = rotateImage(baseImage, degrees: 180) {
-      imagesToTry.append(("Rotated 180°", rotated180))
-    }
-    if let rotated270 = rotateImage(baseImage, degrees: 270) {
-      imagesToTry.append(("Rotated 270°", rotated270))
-    }
-    print("ImageCodeScanner iOS - Added rotated versions")
     
     // Convert formats array to Vision symbologies
     var symbologies: [VNBarcodeSymbology] = []
@@ -226,13 +255,13 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
     func tryScanning(images: [(String, UIImage)], index: Int) {
       guard index < images.count else {
         // No more images to try, return empty result
-        print("ImageCodeScanner iOS - No barcodes found after trying all preprocessing options")
+        debugLog("ImageCodeScanner iOS - No barcodes found after trying all preprocessing options")
         safeResolve([])
         return
       }
       
       let (description, currentImage) = images[index]
-      print("ImageCodeScanner iOS - Attempting scan with: \(description)")
+      debugLog("ImageCodeScanner iOS - Attempting scan with: \(description)")
       
       guard let cgImage = currentImage.cgImage else {
         // Try next image if this one fails
@@ -244,7 +273,7 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
       let request = VNDetectBarcodesRequest { request, error in
         DispatchQueue.main.async {
           if let error = error {
-            print("ImageCodeScanner iOS - \(description) failed: \(error.localizedDescription)")
+            debugLog("ImageCodeScanner iOS - \(description) failed: \(error.localizedDescription)")
             // Try next image
             tryScanning(images: images, index: index + 1)
             return
@@ -316,11 +345,11 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
           }
           
           if barcodeResults.isEmpty {
-            print("ImageCodeScanner iOS - \(description): No barcodes found")
+            debugLog("ImageCodeScanner iOS - \(description): No barcodes found")
             // Try next image
             tryScanning(images: images, index: index + 1)
           } else {
-            print("ImageCodeScanner iOS - Success with \(description)! Found \(barcodeResults.count) codes")
+            debugLog("ImageCodeScanner iOS - Success with \(description)! Found \(barcodeResults.count) codes")
             safeResolve(barcodeResults)
           }
         }
@@ -345,7 +374,7 @@ class ImageCodeScanner: NSObject, RCTBridgeModule {
           try handler.perform([request])
         } catch {
           DispatchQueue.main.async {
-            print("ImageCodeScanner iOS - \(description) perform error: \(error.localizedDescription)")
+            debugLog("ImageCodeScanner iOS - \(description) perform error: \(error.localizedDescription)")
             // Try next image
             tryScanning(images: images, index: index + 1)
           }
