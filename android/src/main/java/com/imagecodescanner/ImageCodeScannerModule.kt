@@ -140,8 +140,9 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
         val filePath = uri.path ?: Uri.decode(path.removePrefix("file://"))
         FileInputStream(File(filePath))
       }
-      else -> reactApplicationContext.contentResolver.openInputStream(uri)
+      "content" -> reactApplicationContext.contentResolver.openInputStream(uri)
         ?: throw IllegalArgumentException("Cannot open image URI: $path")
+      else -> throw IllegalArgumentException("Unsupported image URI scheme: ${uri.scheme}")
     }
   }
 
@@ -307,9 +308,20 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
         
         val image = InputImage.fromBitmap(currentBitmap, 0)
         val scanner = BarcodeScanning.getClient(scannerOptions)
+
+        fun tryNextImageOrReject() {
+          try {
+            tryNextImage()
+          } catch (e: Exception) {
+            debugError("Failed to continue image scan", e)
+            cleanupBitmaps()
+            safeReject("IMAGE_LOAD_ERROR", "Error loading image: ${e.message}", e)
+          }
+        }
         
         scanner.process(image)
           .addOnSuccessListener { barcodes ->
+            var shouldTryNext = false
             try {
               if (barcodes.isNotEmpty()) {
                 // Found barcodes, process and return
@@ -348,21 +360,25 @@ class ImageCodeScannerModule(reactContext: ReactApplicationContext) :
               } else {
                 // No barcodes found, try next preprocessing
                 cleanupAttemptBitmap(currentBitmap)
-                tryNextImage()
+                shouldTryNext = true
               }
             } catch (e: Exception) {
               debugError("Error processing results for $description", e)
               cleanupAttemptBitmap(currentBitmap)
-              tryNextImage()
+              shouldTryNext = true
             } finally {
               scanner.close()
+            }
+
+            if (shouldTryNext) {
+              tryNextImageOrReject()
             }
           }
           .addOnFailureListener { exception ->
             debugError("Scan failed for $description: ${exception.message}", exception)
             cleanupAttemptBitmap(currentBitmap)
             scanner.close()
-            tryNextImage()
+            tryNextImageOrReject()
           }
       }
       
