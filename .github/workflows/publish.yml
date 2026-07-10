@@ -12,7 +12,7 @@ on:
     inputs:
       release_tag:
         description: 'Existing git tag to publish (for example, v1.2.0)'
-        required: false
+        required: true
         type: string
       npm_tag:
         description: 'npm tag (latest, beta, next)'
@@ -104,7 +104,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
       id-token: write
     steps:
       - name: Checkout
@@ -136,9 +135,6 @@ jobs:
 
       - name: Typecheck
         run: yarn typecheck
-
-      - name: Build package
-        run: yarn build
 
       - name: Check if version already exists on npm
         id: check_version
@@ -232,7 +228,22 @@ jobs:
               body = `Release ${TAG}`;
             }
 
-            await github.rest.repos.createRelease({
+            let existingRelease = null;
+
+            try {
+              const response = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: TAG,
+              });
+              existingRelease = response.data;
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+            }
+
+            const release = {
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: TAG,
@@ -240,6 +251,15 @@ jobs:
               body,
               draft: false,
               prerelease: PRERELEASE === 'true',
-            });
+            };
 
-            core.info(`GitHub release created for ${TAG}`);
+            if (existingRelease) {
+              await github.rest.repos.updateRelease({
+                ...release,
+                release_id: existingRelease.id,
+              });
+              core.info(`GitHub release updated for ${TAG}`);
+            } else {
+              await github.rest.repos.createRelease(release);
+              core.info(`GitHub release created for ${TAG}`);
+            }

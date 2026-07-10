@@ -22,7 +22,7 @@
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib node_modules/.cache",
     "prepare": "bob build",
-    "prepublishOnly": "yarn clean && yarn typecheck && yarn lint && yarn test && yarn build",
+    "prepublishOnly": "yarn clean && yarn build",
     "build": "bob build",
     "release": "release-it",
     "release:dry": "release-it --dry-run",
