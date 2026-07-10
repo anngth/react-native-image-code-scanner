@@ -52,7 +52,7 @@
 
 ### Android Requirements
 
-- **Minimum SDK**: 21 (Android 5.0 Lollipop)
+- **Minimum SDK**: 24 (Android 7.0 Nougat)
 - **Target SDK**: 34+ (Android 14+)
 - **Compile SDK**: 35+
 - **Kotlin**: 1.6.0+
@@ -142,7 +142,7 @@ If you're upgrading from React Native 0.6x:
 
 3. Update iOS deployment target to 13.4 or higher
 
-4. Update Android minSdkVersion to 21 or higher
+4. Update Android minSdkVersion to 24 or higher
 
 ### From Old to New Architecture
 
