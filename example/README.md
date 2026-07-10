@@ -12,83 +12,117 @@ This app demonstrates how to use `react-native-image-code-scanner` in an Expo pr
 ## Requirements
 
 - Node.js `>=18`
+- Yarn `3.6.1` via Corepack
 - iOS: Xcode (for native build)
 - Android: Android Studio + SDK (for native build)
 
+Use Yarn for this workspace. Do not mix npm installs with the generated native projects.
+
 ## Install
 
+From the repository root:
+
 ```bash
-cd example
-npm install
-# or
 yarn install
 ```
 
-## Run modes
+## Metro / Fast Refresh
 
-### 1) Expo Go / quick UI check
-
-```bash
-npm start
-# or
-yarn start
-```
-
-- Useful for UI iteration.
-- Barcode scanning will not work in Expo Go because this package uses native modules.
-
-### 2) Native run (recommended, full functionality)
+Run Metro from the example folder:
 
 ```bash
-# iOS
-npm run ios
-
-# Android
-npm run android
+yarn expo start --clear --dev-client --host localhost
 ```
 
-If you need a clean native regeneration:
+- Press `i` for iOS simulator.
+- Press `a` for Android emulator.
+- If the app was opened before Metro started, terminate the app and open it again from Metro.
+- JS/TSX changes use Fast Refresh. Native, Podfile, Gradle, or architecture changes require rebuild.
+
+## New Architecture
+
+`app.json` is the source of truth:
+
+```json
+{
+  "expo": {
+    "newArchEnabled": true
+  }
+}
+```
+
+After changing this value, run `prebuild --clean` and rebuild the native app.
+
+## iOS Build
+
+Clean regenerate iOS and build:
 
 ```bash
-npm run prebuild:clean
-npm run ios
-# or
-npm run android
+cd example
+yarn expo prebuild --clean --platform ios
+yarn expo run:ios --no-build-cache
 ```
 
-## How to test
+With Metro running in another terminal:
 
-1. Open app on iOS/Android native build.
-2. Choose `Camera` or `Gallery`.
-3. Pick barcode formats.
-4. Tap `Scan Image`.
-5. Check detected results and scan time.
+```bash
+cd example
+yarn expo run:ios --no-bundler --no-build-cache
+```
+
+Verify New Architecture:
+
+```bash
+cat ios/Podfile.properties.json
+# expect: "newArchEnabled": "true"
+```
+
+## Android Build
+
+Clean regenerate Android and build:
+
+```bash
+cd example
+yarn expo prebuild --clean --platform android
+yarn expo run:android --no-build-cache
+```
+
+With Metro running in another terminal:
+
+```bash
+cd example
+yarn expo run:android --no-bundler --no-build-cache
+```
+
+Verify New Architecture:
+
+```bash
+grep newArchEnabled android/gradle.properties
+# expect: newArchEnabled=true
+```
 
 ## Notes
 
-- Preprocessing is automatic (grayscale, contrast enhancement, rotation attempts).
+- Preprocessing options are configurable in the UI: contrast, grayscale, rotations.
 - At least one barcode format must stay selected.
 - Permissions for camera and media library are requested at runtime.
+- Expo Go is not enough for scanning because this package uses native modules.
 
 ## Troubleshooting
 
-- `No barcodes found`:
-  - Use a clearer image or crop closer to barcode.
-  - Select only relevant formats.
-- iOS build errors:
-  - Run `npm run prebuild:clean` then `npm run ios`.
-- Android build errors:
-  - Run `npm run prebuild:clean` then `npm run android`.
-- Metro cache issues:
-  - Run `expo start -c`.
+- White screen: Metro is probably not running or the app opened before Metro. Start Metro, terminate the app, then press `i`/`a`.
+- No Fast Refresh: confirm `http://127.0.0.1:8081/status` works and open the app from Metro.
+- iOS native issue after config changes: run `yarn expo prebuild --clean --platform ios`.
+- Android native issue after config changes: run `yarn expo prebuild --clean --platform android`.
+- Metro cache issue: run `yarn expo start --clear --dev-client --host localhost`.
 
 ## Scripts
 
-- `npm start`: Start Expo dev server
-- `npm run ios`: Build and run on iOS (native)
-- `npm run android`: Build and run on Android (native)
-- `npm run prebuild`: Generate native projects
-- `npm run prebuild:clean`: Regenerate native projects from scratch
+- `yarn start`: Start Expo dev server
+- `yarn ios`: Build and run on iOS
+- `yarn android`: Build and run on Android
+- `yarn prebuild`: Generate native projects
+- `yarn prebuild:clean`: Regenerate native projects from scratch
 
 ## Related docs
 
