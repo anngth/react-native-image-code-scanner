@@ -3,11 +3,10 @@
     "name": "ImageCodeScannerExample",
     "slug": "image-code-scanner-example",
     "version": "1.0.0",
+    "newArchEnabled": true,
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.imagecodescanner.example",
