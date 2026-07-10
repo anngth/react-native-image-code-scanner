@@ -45,7 +45,7 @@ npx expo run:ios   # or: npx expo run:android
 ### React Native CLI
 
 ```bash
-npm install react-native-image-code-scanner
+yarn add react-native-image-code-scanner
 cd ios && pod install
 ```
 
