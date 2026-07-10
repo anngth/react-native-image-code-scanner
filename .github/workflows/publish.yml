@@ -1,18 +1,20 @@
 name: Publish to npm
 
 concurrency:
-  group: publish-${{ github.event.workflow_run.head_sha || github.sha }}
-  cancel-in-progress: true
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
 
 on:
-  workflow_run:
-    workflows:
-      - CI
-    types:
-      - completed
+  push:
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
     inputs:
-      tag:
+      release_tag:
+        description: 'Existing git tag to publish (for example, v1.2.0)'
+        required: false
+        type: string
+      npm_tag:
         description: 'npm tag (latest, beta, next)'
         required: false
         default: 'latest'
@@ -24,7 +26,6 @@ on:
 
 jobs:
   prepare:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && !github.event.workflow_run.head_branch)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -41,43 +42,52 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ inputs.release_tag || github.sha }}
 
       - name: Determine release metadata
         id: meta
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF_NAME: ${{ github.ref_name }}
+          MANUAL_NPM_TAG: ${{ inputs.npm_tag }}
+          MANUAL_RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
 
-          REF_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          REF_SHA="$(git rev-parse HEAD)"
           VERSION="$(node -p "require('./package.json').version")"
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            RELEASE_TAG="v${VERSION}"
-            NPM_TAG="${{ inputs.tag }}"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            RELEASE_TAG="${MANUAL_RELEASE_TAG:-v${VERSION}}"
+            NPM_TAG="$MANUAL_NPM_TAG"
             SHOULD_PUBLISH="true"
+
+            if [ "$RELEASE_TAG" != "v${VERSION}" ]; then
+              echo "Release tag ${RELEASE_TAG} does not match package.json version v${VERSION}."
+              exit 1
+            fi
+
             if echo "$VERSION" | grep -q "-"; then
               PRERELEASE="true"
             else
               PRERELEASE="false"
             fi
           else
-            RELEASE_TAG="$(git tag --points-at "$REF_SHA" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+([.-].*)?$' | head -n1 || true)"
+            RELEASE_TAG="$GIT_REF_NAME"
 
-            if [ -z "$RELEASE_TAG" ]; then
-              echo "No semver tag found for commit $REF_SHA. Skipping publish."
-              SHOULD_PUBLISH="false"
-              NPM_TAG=""
-              PRERELEASE="false"
+            if [ "$RELEASE_TAG" != "v${VERSION}" ]; then
+              echo "Release tag ${RELEASE_TAG} does not match package.json version v${VERSION}."
+              exit 1
+            fi
+
+            SHOULD_PUBLISH="true"
+            if echo "$VERSION" | grep -q "-"; then
+              NPM_TAG="next"
+              PRERELEASE="true"
             else
-              SHOULD_PUBLISH="true"
-              if echo "$VERSION" | grep -q "-"; then
-                NPM_TAG="next"
-                PRERELEASE="true"
-              else
-                NPM_TAG="latest"
-                PRERELEASE="false"
-              fi
+              NPM_TAG="latest"
+              PRERELEASE="false"
             fi
           fi
 

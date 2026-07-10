@@ -3,9 +3,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - 'v*.*.*'
-      - 'v*.*.*-*'
   pull_request:
     branches:
       - main
@@ -60,6 +57,7 @@ jobs:
         run: yarn prepare
 
   build-android:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     env:
       TURBO_CACHE_DIR: .turbo/android
@@ -123,6 +121,7 @@ jobs:
           yarn turbo run build:android --cache-dir="${{ env.TURBO_CACHE_DIR }}"
 
   build-ios:
+    if: github.event_name == 'pull_request'
     runs-on: macos-15
     env:
       XCODE_VERSION: '16.4'
