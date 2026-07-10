@@ -28,7 +28,7 @@ Scan QR codes and barcodes from local image files in React Native (iOS Vision + 
 ## Requirements
 
 - React Native `>=0.70.0`, React `>=17.0.0`, Node `>=18`
-- iOS `13.4+`, Android `minSdkVersion 21+`
+- iOS `13.4+`, Android `minSdkVersion 24+`
 
 ## Installation
 
@@ -124,7 +124,7 @@ Set `enhanceContrast`, `convertToGrayscale`, or `tryRotations` to `false` to ski
 
 - **No result:** check image quality/resolution, limit `formats`, crop closer to the barcode.
 - **iOS build:** `cd ios && pod install`; deployment target `13.4+`.
-- **Android build:** `cd android && ./gradlew clean`; `minSdkVersion >= 21`.
+- **Android build:** `cd android && ./gradlew clean`; `minSdkVersion >= 24`.
 - **Expo:** requires prebuild; not supported in Expo Go.
 
 ## Example App
