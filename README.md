@@ -27,7 +27,7 @@ Scan QR codes and barcodes from local image files in React Native (iOS Vision + 
 
 ## Requirements
 
-- React Native `>=0.70.0`, React `>=17.0.0`, Node `>=18`
+- React Native `>=0.70.0` (validated through `0.79.x`; `0.80.x+` compatibility is pending), React `>=17.0.0`, Node `>=18`
 - iOS `13.4+`, Android `minSdkVersion 24+`
 
 ## Installation
@@ -58,9 +58,12 @@ If your app picks images from camera, add to `Info.plist`:
 
 ## Usage
 
-Works with any image picker — pass the local image URI to `scan()`.
-Android supports file paths, `file://` URIs, and `content://` URIs.
-iOS supports file paths and `file://` URIs, including percent-encoded paths.
+Works with image pickers that return a supported local path or URI:
+
+- Android: local file paths, `file://` URIs, and resolver-backed `content://` URIs.
+- iOS: local file paths and `file://` URIs, including percent-encoded paths.
+
+Schemes such as `ph://`, `assets-library://`, remote URLs, and other provider-specific values are not guaranteed to work.
 
 ```ts
 import * as ImagePicker from 'expo-image-picker';
@@ -86,7 +89,7 @@ async function pickAndScan() {
 }
 ```
 
-Also compatible with `react-native-image-picker` and other pickers that return a local URI.
+Also compatible with `react-native-image-picker` and other pickers when they return one of the supported values above.
 
 ## API
 
