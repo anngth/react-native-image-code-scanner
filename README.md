@@ -1,3 +1,5 @@
+
+
 # React Native Image Code Scanner
 
 <p align="center">
@@ -49,9 +51,11 @@ yarn add react-native-image-code-scanner
 cd ios && pod install
 ```
 
-If your app picks images from camera, add to `Info.plist`:
+If your app picks images from the camera roll or camera, add to `Info.plist`:
 
 ```xml
+<key>NSPhotoLibraryUsageDescription</key>
+<string>This app needs access to photo library to select images for barcode scanning</string>
 <key>NSCameraUsageDescription</key>
 <string>This app needs camera access to scan barcodes</string>
 ```
